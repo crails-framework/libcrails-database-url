@@ -1,0 +1,12 @@
+: 1
+name: libcrails-database-url
+version: 2.0.0
+language: c++
+project: crails-modules
+summary: library to parse database urls
+license: BSD-3-Clause
+description-file: README.md
+url: https://github.com/crails-framework/libcrails-database-url.git
+email: michael@planed.es
+depends: * build2 >= 0.16.0
+depends: * bpkg >= 0.16.0

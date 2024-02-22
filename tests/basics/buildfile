@@ -1,0 +1,3 @@
+import libs = libcrails-database-url%lib{crails-database-url}
+
+exe{driver}: {hxx ixx txx cxx}{**} $libs testscript{**}

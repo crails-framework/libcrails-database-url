@@ -1,0 +1,7 @@
+project = libcrails-database-url
+
+using version
+using config
+using test
+using install
+using dist
