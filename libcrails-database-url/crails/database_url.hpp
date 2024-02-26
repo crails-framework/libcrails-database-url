@@ -10,7 +10,7 @@ namespace Crails
   struct DatabaseUrl
   {
     DatabaseUrl() {}
-    DatabaseUrl(const char*);
+    DatabaseUrl(const std::string_view);
 
     void initialize(const std::string_view url);
     std::string to_string() const;

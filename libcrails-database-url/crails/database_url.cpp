@@ -66,10 +66,10 @@ static pair<int, int> get_database_name_range(const string_view url)
   return { start_database_name, url.length() };
 }
 
-DatabaseUrl::DatabaseUrl(const char* str)
+DatabaseUrl::DatabaseUrl(const string_view url)
 {
-  if (str)
-    initialize(str);
+  if (url.length())
+    initialize(url);
 }
 
 void DatabaseUrl::initialize(const string_view url)
