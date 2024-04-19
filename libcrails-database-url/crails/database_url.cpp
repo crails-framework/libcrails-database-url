@@ -1,7 +1,6 @@
 #include <cstdlib>
 #include <sstream>
 #include "database_url.hpp"
-#include <iostream>
 
 using namespace std;
 using namespace Crails;
@@ -66,10 +65,16 @@ static pair<int, int> get_database_name_range(const string_view url)
   return { start_database_name, url.length() };
 }
 
+DatabaseUrl::DatabaseUrl(const char* url)
+{
+  if (!url)
+    throw runtime_error("cannot initialize DatabaseUrl from a NULL string");
+  initialize(url);
+}
+
 DatabaseUrl::DatabaseUrl(const string_view url)
 {
-  if (url.length())
-    initialize(url);
+  initialize(url);
 }
 
 void DatabaseUrl::initialize(const string_view url)

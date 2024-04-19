@@ -64,5 +64,16 @@ int main ()
     assert(url.to_string() == "redis://roger:paswd@localhost/lenom");
   }
 
+  // Does not crash when constructing from NULL strings
+  //
+  {
+    const char* null_str = 0;
+    try {
+      DatabaseUrl url(null_str);
+      assert(false); // should've thrown an exception
+    } catch (const std::exception&) {
+    }
+  }
+
   return 0;
 }
