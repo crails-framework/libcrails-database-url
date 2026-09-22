@@ -64,6 +64,55 @@ int main ()
     assert(url.to_string() == "redis://roger:paswd@localhost/lenom");
   }
 
+  // Username with no password and no port
+  //
+  {
+    DatabaseUrl no_password_no_port("postgres://alice@localhost/mydb");
+
+    assert(no_password_no_port.username == "alice");
+    assert(no_password_no_port.password == "");
+    assert(no_password_no_port.hostname == "localhost");
+    assert(no_password_no_port.database_name == "mydb");
+  }
+
+  // no port, no slash, no database
+  //
+  {
+    DatabaseUrl bare_host("postgres://alice@localhost");
+
+    assert(bare_host.username == "alice");
+    assert(bare_host.hostname == "localhost");
+    assert(bare_host.port == 0);
+    assert(bare_host.database_name == "");
+  }
+
+  // Trailing slash with no database name
+  // 
+  {
+    DatabaseUrl trailing_slash("postgres://alice@localhost/");
+
+    assert(trailing_slash.hostname == "localhost");
+    assert(trailing_slash.database_name == "");
+  }
+
+  // Port present but nothing after it
+  // 
+  {
+    DatabaseUrl port_only("postgres://alice@localhost:5432");
+
+    assert(port_only.hostname == "localhost");
+    assert(port_only.port == 5432);
+    assert(port_only.database_name == "");
+  }
+
+  // Missing protocol
+  //
+  {
+    DatabaseUrl no_protocol("alice:secret@localhost/mydb");
+
+    assert(no_protocol.type == "");
+  }
+
   // Does not crash when constructing from NULL strings
   //
   {

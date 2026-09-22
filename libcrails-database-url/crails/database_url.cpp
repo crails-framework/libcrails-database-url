@@ -5,64 +5,78 @@
 using namespace std;
 using namespace Crails;
 
-static pair<int, int> get_protocol_range(const string_view url)
+static size_t advance_past(size_t pos, size_t delimiter_length)
 {
-  return { 0, url.find("://") };
+  return pos == string_view::npos ? string_view::npos : pos + delimiter_length;
 }
 
-static pair<int, int> get_username_range(const string_view url)
+static pair<size_t, size_t> get_protocol_range(const string_view url)
 {
-  int start_name = get_protocol_range(url).second + 3;
-  int next_colon = url.find(':', start_name);
-  int next_arobase = url.find('@', start_name);
+  size_t end = url.find("://");
+
+  return end == string_view::npos
+    ? pair<size_t, size_t>{ 0, 0 }
+    : pair<size_t, size_t>{ 0, end };
+}
+
+static pair<size_t, size_t> get_username_range(const string_view url)
+{
+  size_t start_name = advance_past(get_protocol_range(url).second, 3);
+  size_t next_colon = url.find(':', start_name);
+  size_t next_arobase = url.find('@', start_name);
 
   return { start_name, min(next_colon, next_arobase) };
 }
 
-static pair<int, int> get_password_range(const string_view url)
+static pair<size_t, size_t> get_password_range(const string_view url)
 {
-  int separator = get_username_range(url).second;
-  int start_password = separator + 1;
+  size_t separator = get_username_range(url).second;
+  size_t start_password = advance_past(separator, 1);
 
-  if (url[separator] == '@')
+  if (separator >= url.length() || url[separator] == '@')
     return { 0, 0 };
-  return { start_password, url.find("@", start_password) };
+  return { start_password, url.find('@', start_password) };
 }
 
-static pair<int, int> get_hostname_range(const string_view url)
+static pair<size_t, size_t> get_hostname_range(const string_view url)
 {
-  int credentials_end = url.find('@');
-  int start_hostname = credentials_end != string::npos
+  size_t credentials_end = url.find('@');
+  size_t start_hostname = credentials_end != string_view::npos
     ? credentials_end + 1
-    : get_protocol_range(url).second + 3;
-  int next_colon = url.find(':', start_hostname);
-  int next_slash = url.find('/', start_hostname);
+    : advance_past(get_protocol_range(url).second, 3);
+  size_t next_colon = url.find(':', start_hostname);
+  size_t next_slash = url.find('/', start_hostname);
 
-  next_colon = next_colon == string::npos ? url.length() : next_colon;
-  next_slash = next_slash == string::npos ? url.length() : next_slash;
   return { start_hostname, min(next_colon, next_slash) };
 }
 
-static pair<int, int> get_port_range(const string_view url)
+static pair<size_t, size_t> get_port_range(const string_view url)
 {
-  int separator = get_hostname_range(url).second;
-  int start_port = separator + 1;
-  int end_port = url.find('/', start_port);
+  size_t separator = get_hostname_range(url).second;
+  size_t start_port = advance_past(separator, 1);
 
-  if (url[separator] != ':')
+  if (separator >= url.length() || url[separator] != ':')
     return { separator, separator };
-  if (end_port == string::npos)
-    return { start_port, url.length() };
-  return { start_port, end_port };
+  return { start_port, url.find('/', start_port) };
 }
 
-static pair<int, int> get_database_name_range(const string_view url)
+static pair<size_t, size_t> get_database_name_range(const string_view url)
 {
-  int start_database_name = get_port_range(url).second + 1;
+  size_t start_database_name = advance_past(get_port_range(url).second, 1);
 
   if (start_database_name >= url.length())
     return { 0, 0 };
   return { start_database_name, url.length() };
+}
+
+static string redact_credentials(const string_view url)
+{
+  size_t protocol_end = url.find("://");
+  size_t at           = url.find('@');
+
+  if (protocol_end == string_view::npos || at == string_view::npos || at < protocol_end)
+    return string(url); // no credentials to hide
+  return string(url.substr(0, protocol_end + 3)) + "***@" + string(url.substr(at + 1));
 }
 
 DatabaseUrl::DatabaseUrl(const char* url)
@@ -98,10 +112,15 @@ void DatabaseUrl::initialize(const string_view url)
     catch (exception& e)
     {
       throw runtime_error(
-        string("Failed to read database url string ") + string(url) + ": " + e.what()
+        string("Failed to read database url string ") + redact_credentials(url) + ": " + e.what()
       );
     }
   }
+}
+
+string DatabaseUrl::to_redacted_string() const
+{
+  return redact_credentials(to_string());
 }
 
 string DatabaseUrl::to_string() const
@@ -124,9 +143,11 @@ string DatabaseUrl::to_string() const
   return stream.str();
 }
 
-string_view DatabaseUrl::substr(const string_view url, pair<int, int> range)
+string_view DatabaseUrl::substr(const string_view url, pair<size_t, size_t> range)
 {
-  if (range.first < 0 || range.first == range.second)
+  if (range.first == string_view::npos || range.first == range.second)
     return {};
+  if (range.second == string_view::npos)
+    return url.substr(range.first); // no closing delimiter found: goes to the end
   return url.substr(range.first, range.second - range.first);
 }

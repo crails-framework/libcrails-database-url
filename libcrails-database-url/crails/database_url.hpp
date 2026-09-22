@@ -14,6 +14,7 @@ namespace Crails
     DatabaseUrl(const std::string_view);
 
     void initialize(const std::string_view);
+    std::string to_redacted_string() const;
     std::string to_string() const;
     operator std::string() const { return to_string(); }
 
@@ -21,7 +22,7 @@ namespace Crails
     unsigned int port;
 
   private:
-    std::string_view substr(const std::string_view url, std::pair<int,int> range);
+    std::string_view substr(const std::string_view url, std::pair<std::size_t,std::size_t> range);
   };
 }
 
