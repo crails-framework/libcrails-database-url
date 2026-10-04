@@ -124,5 +124,29 @@ int main ()
     }
   }
 
+  // Can produce the database URL with stripped credentials
+  //
+  {
+    DatabaseUrl url("mongodb://francis:huster@localhost:27017");
+    assert(url.to_string() == "mongodb://francis:huster@localhost:27017");
+    assert(url.to_unauthentified_string() == "mongodb://localhost:27017");
+  }
+
+  // Can parse and restitute the URL params 
+  //
+  {
+    DatabaseUrl url("mongodb://francis:huster@localhost:27017/database_name?authSource=admin");
+    assert(url.database_name == "database_name");
+    assert(url.params == "authSource=admin");
+    assert(url.to_string() == "mongodb://francis:huster@localhost:27017/database_name?authSource=admin");
+    url.initialize("mongodb://francis:huster@localhost?param=value&truc=much");
+    assert(url.hostname == "localhost");
+    assert(url.database_name.empty());
+    assert(url.params == "param=value&truc=much");
+    assert(url.to_string() == "mongodb://francis:huster@localhost?param=value&truc=much");
+    url.database_name = "dbname";
+    assert(url.to_string() == "mongodb://francis:huster@localhost/dbname?param=value&truc=much");
+  }
+
   return 0;
 }

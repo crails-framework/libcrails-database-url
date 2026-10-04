@@ -46,8 +46,9 @@ static pair<size_t, size_t> get_hostname_range(const string_view url)
     : advance_past(get_protocol_range(url).second, 3);
   size_t next_colon = url.find(':', start_hostname);
   size_t next_slash = url.find('/', start_hostname);
+  size_t next_int   = url.find('?', start_hostname);
 
-  return { start_hostname, min(next_colon, next_slash) };
+  return { start_hostname, min(min(next_colon, next_slash), next_int) };
 }
 
 static pair<size_t, size_t> get_port_range(const string_view url)
@@ -57,16 +58,30 @@ static pair<size_t, size_t> get_port_range(const string_view url)
 
   if (separator >= url.length() || url[separator] != ':')
     return { separator, separator };
-  return { start_port, url.find('/', start_port) };
+  return { start_port, min(url.find('/', start_port), url.find('?', start_port)) };
 }
 
 static pair<size_t, size_t> get_database_name_range(const string_view url)
 {
   size_t start_database_name = advance_past(get_port_range(url).second, 1);
+  size_t end_database_name = url.length();
 
-  if (start_database_name >= url.length())
+  if (start_database_name >= url.length() || url[start_database_name - 1] != '/')
+    return { start_database_name, start_database_name };
+  end_database_name = url.find('?', start_database_name);
+  if (end_database_name == string_view::npos)
+    end_database_name = url.length();
+  return { start_database_name, end_database_name };
+}
+
+static pair<size_t, size_t> get_params_range(const string_view url)
+{
+  size_t end_database_name = get_port_range(url).second;
+  size_t params_start = advance_past(url.find('?', end_database_name), 1);
+
+  if (params_start == string_view::npos)
     return { 0, 0 };
-  return { start_database_name, url.length() };
+  return { params_start, url.length() };
 }
 
 static string redact_credentials(const string_view url)
@@ -106,8 +121,11 @@ void DatabaseUrl::initialize(const string_view url)
         username = string(substr(url, get_username_range(url)));
         password = string(substr(url, get_password_range(url)));
       }
-      port     = atoi(string(substr(url, get_port_range(url))).c_str());
+      else
+        username = password = string();
+      port          = atoi(string(substr(url, get_port_range(url))).c_str());
       database_name = string(substr(url, get_database_name_range(url)));
+      params        = string(substr(url, get_params_range(url)));
     }
     catch (exception& e)
     {
@@ -123,9 +141,17 @@ string DatabaseUrl::to_redacted_string() const
   return redact_credentials(to_string());
 }
 
+string DatabaseUrl::to_unauthentified_string() const
+{
+  DatabaseUrl copy = *this;
+
+  copy.username = copy.password = string();
+  return copy.to_string();
+}
+
 string DatabaseUrl::to_string() const
 {
-  stringstream stream;
+  ostringstream stream;
 
   stream << type << "://";
   if (username.length())
@@ -140,6 +166,8 @@ string DatabaseUrl::to_string() const
     stream << ':' << port;
   if (database_name.length())
     stream << '/' << database_name;
+  if (params.length())
+    stream << '?' << params;
   return stream.str();
 }
 

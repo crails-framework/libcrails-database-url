@@ -15,11 +15,13 @@ namespace Crails
 
     void initialize(const std::string_view);
     std::string to_redacted_string() const;
+    std::string to_unauthentified_string() const;
     std::string to_string() const;
     operator std::string() const { return to_string(); }
 
     std::string  type, hostname, username, password, database_name;
     unsigned int port;
+    std::string  params;
 
   private:
     std::string_view substr(const std::string_view url, std::pair<std::size_t,std::size_t> range);
